@@ -22,4 +22,3 @@ def search_images():
 
 if __name__ == "__main__":
     app.run(debug=True)
-@35LcZo$Uc@RSH$kuf
