@@ -1,23 +1,106 @@
-from flask import Flask, jsonify, request
+from flask import Flask, render_template, request, jsonify
+import requests
+from urllib.parse import quote
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 
-# Simulated database
-image_database = {
-    "apple": [
-        "https://media.istockphoto.com/id/184276818/photo/red-apple.jpg?s=1024x1024&w=is&k=20&c=d1zu5oXbrdTrk2AtTyUtvnWLF7ZeIbTgqSXabU4ABi4=",
-    ],
-    "dog": [
-        "https://www.princeton.edu/sites/default/files/styles/1x_full_2x_half_crop/public/images/2022/02/KOA_Nassau_2697x1517.jpg?itok=Bg2K7j7J"
-    ],
-}
+load_dotenv()
+
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY")  # Replace with your actual OMDB
 
 
-@app.route("/search", methods=["GET"])
-def search_images():
-    word = request.args.get("word", "").lower()
-    images = image_database.get(word, [])
-    return jsonify({"images": images})
+def get_omdb_data(movie_name):
+    """Fetch movie metadata from OMDB using API."""
+    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={quote(movie_name)}"
+    response = requests.get(url)
+    if response.status_code != 200:
+        return None, "Failed to fetch data from OMDB API"
+
+    data = response.json()
+    if data.get("Response") == "True":
+        return data, None
+    else:
+        return None, "Movie not found."
+
+
+def get_movie_year(data):
+    if data.get("Year"):
+        return data.get("Year"), None
+    return None, "No year data."
+
+
+def get_rotten_tomatoes_rating(data):
+    # Extract Rotten Tomatoes rating
+    ratings = data.get("Ratings", [])
+
+    for rating in ratings:
+        if rating["Source"] == "Rotten Tomatoes":
+            return rating["Value"], None
+
+    return None, "Rotten Tomatoes rating not found."
+
+
+def get_imdb_rating(data):
+    # Extract Rotten Tomatoes rating
+    ratings = data.get("Ratings", [])
+
+    for rating in ratings:
+        if rating["Source"] == "Internet Movie Database":
+            return rating["Value"], None
+
+    return None, "Internet Movie Database rating not found."
+
+
+def get_metacritic_rating(data):
+    # Extract Rotten Tomatoes rating
+    ratings = data.get("Ratings", [])
+
+    for rating in ratings:
+        if rating["Source"] == "Metacritic":
+            return rating["Value"], None
+
+    return None, "Metacritic rating not found."
+
+
+def get_letterboxd_url(movie_name):
+    """Generate a Letterboxd search URL."""
+    base_url = "https://letterboxd.com/search/"
+    return f"{base_url}{quote(movie_name)}"
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/search", methods=["POST"])
+def search():
+    movie_name = request.form.get("movieName")
+    if not movie_name:
+        return jsonify({"error": "Movie name is required"}), 400
+
+    data, error = get_omdb_data(movie_name)
+    if error:
+        return jsonify({"error": error}), 404
+
+    year, _ = get_movie_year(data)
+    rating_rt, _ = get_rotten_tomatoes_rating(data)
+    rating_imdb, _ = get_imdb_rating(data)
+    rating_mc, _ = get_metacritic_rating(data)
+    letterboxd_url = get_letterboxd_url(movie_name)
+
+    return jsonify(
+        {
+            "movie": movie_name,
+            "year": year,
+            "rating_rt": rating_rt,
+            "rating_imdb": rating_imdb,
+            "rating_mc": rating_mc,
+            "letterboxd": letterboxd_url,
+        }
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotten-Boxd</title>
+    <style>
+        @font-face {
+            font-family: 'PPMori-Regular';
+            src: url('./fonts/PPMori-Regular.otf') format('truetype');
+        }
+        body {
+            font-family: 'PPMori-Regular', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            font-size: 36px;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #02066f;
+            background-color: #f2f3f4;
+        }
+        .container {
+            text-align: center;
+        }
+
+        .search-page {
+            display: block;
+        }
+
+        .result-page {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+        }
+
+        .quadrant {
+            width: 50%;
+            height: 50%;
+            position: absolute;
+        }
+
+        .top-left {
+            top: 0;
+            left: 0;
+            text-align: left;
+            padding: 20px;
+            background-color: #ed4e00;
+            color: #ffffff;
+        }
+
+        .bottom-left {
+            top: 0;
+            left: 0;
+            text-align: left;
+            padding: 20px;
+            
+        }
+        .top-right {
+            bottom: 0;
+            right: 0;
+            text-align: left;
+            padding: 20px;
+        }
+
+        .bottom-right {
+            bottom: 0;
+            right: 0;
+            text-align: right;
+            padding: 20px;
+            font-size: 40px;
+            color:#1f299c;
+            background-color: #f2f3f4;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+        }
+
+        .link {
+            text-decoration: none;
+            color: blue;
+            font-size: 1.2em;
+            align-items: right; /* Vertically centers them */
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .search-bar {
+            margin-top: 20px;
+            display: flex; /* Ensures the input and button are aligned */
+            align-items: center; /* Vertically centers them */
+            justify-content: center;
+            gap: 10px; /* Adds space between the elements */
+        }
+
+        input[type="text"] {
+            font-family: 'PPMori-Regular', Arial, sans-serif;
+            width: 400px; /* Adjust the length of the search bar */
+            height: 40px; /* Consistent height with button */
+            background-color: #fffdee;
+            align-items: center;
+            justify-content: center;
+            border: none; /* Remove borders */
+            border-radius: 10px; /* Match the button's border-radius */
+            padding: 0 10px; /* Adjust padding for inner spacing */
+            font-size: 24px; /* Ensure readability */
+            color: #200081; 
+        }
+
+        button {
+            height: 40px; /* Match the input's height */
+            padding: 0 20px; /* Add horizontal padding for button width */
+            background-color: #200081;
+            color: #fffdee;
+            align-items: center;
+            justify-content: center;
+            border: none; /* Remove borders */
+            border-radius: 10px; /* Match input's border-radius */
+            font-size: 22px; /* Match input font size */
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0c342c;
+        }
+    </style>
+</head>
+<body>
+    <!-- Search Page -->
+    <div class="container search-page" id="searchPage">
+        <h1>Film Search Made Easy.</h1>
+        <p>Type something in the search bar below:</p>
+        <div class="search-bar">
+            <input 
+                type="text" 
+                id="search" 
+                placeholder="Enter a word" 
+                onkeydown="handleKeyPress(event)"
+            >
+            <button onclick="handleSearch()">Search</button>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div class="result-page" id="resultPage">
+        <div class="quadrant top-left" id="searchWordQuadrant"></div>
+        <div class="quadrant bottom-right">
+            <a class="link" href="https://letterboxd.com/" target="_blank">Visit Letterboxd</a>
+        </div>
+    </div>
+
+    <script>
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                handleSearch();
+            }
+        }
+
+        async function handleSearch() {
+            let query = document.getElementById('search').value.trim();
+            if (!query) {
+                alert("Please enter a search term.");
+                return;
+            }
+
+            try {
+                const response = await fetch("/search", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `movieName=${encodeURIComponent(query)}`
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResultsPage(data.movie, data.year, data.rating_rt, data.rating_imdb, data.rating_mc, data.letterboxd);
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || "An error occurred.");
+                }
+            } catch (error) {
+                console.error("Network error:", error);
+                alert("Network error occurred. Try again.");
+            }
+        }
+
+        function showResultsPage(movieName, year, rtRating, imdbRating, mcRating, link) {
+            document.getElementById("searchPage").style.display = "none";
+            document.getElementById("resultPage").style.display = "block";  
+            document.getElementById("searchWordQuadrant").innerHTML = `
+                <h2>${movieName}</h2>
+                <h2>${year}</h2>
+                <h3>rotten tomatoes: ${rtRating || "N/A"}</h3>
+                <h3>imdb: ${imdbRating || "N/A"}</h3>
+                <h3>metacritic: ${mcRating || "N/A"}</h3>
+            `;
+            const letterboxdLink = document.querySelector(".link");
+            letterboxdLink.href = link || "https://letterboxd.com/";
+            letterboxdLink.textContent = link ? "View on Letterboxd" : "Explore Letterboxd";
+        }
+    </script>
+</body>
+</html>
