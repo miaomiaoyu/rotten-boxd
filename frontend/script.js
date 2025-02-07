@@ -6,7 +6,7 @@ async function handleSearch() {
     }
 
     try {
-        const response = await fetch("http://localhost:3000/api/search", {
+        const response = await fetch("http://localhost:5000/search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ movieName: query }),
